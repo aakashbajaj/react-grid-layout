@@ -80,13 +80,16 @@ export type Props = {
   onResize: EventCallback,
   onResizeStart: EventCallback,
   onResizeStop: EventCallback,
-  onDrop: (itemPosition: {
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    e: Event
-  }) => void,
+  onDrop: (
+    itemPosition: {
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      e: Event
+    },
+    layout: Object
+  ) => void,
   children: ReactChildrenArray<ReactElement<any>>
 };
 // End Types
@@ -802,7 +805,7 @@ export default class ReactGridLayout extends React.Component<Props, State> {
 
     this.removeDroppingPlaceholder();
 
-    this.props.onDrop({ x, y, w, h, e });
+    this.props.onDrop({ x, y, w, h, e }, layout);
   };
 
   render() {
