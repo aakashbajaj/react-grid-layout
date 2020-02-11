@@ -17,6 +17,8 @@ var _reactResizable = require("react-resizable");
 
 var _utils = require("./utils");
 
+var _calculateUtils = require("./calculateUtils");
+
 var _classnames = _interopRequireDefault(require("classnames"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -101,9 +103,9 @@ function (_React$Component) {
         dragging: newPosition
       });
 
-      var _this$calcXY = _this.calcXY(newPosition.top, newPosition.left),
-          x = _this$calcXY.x,
-          y = _this$calcXY.y;
+      var _calcXY = (0, _calculateUtils.calcXY)(_this.getPositionParams(), newPosition.top, newPosition.left, _this.props.w, _this.props.h),
+          x = _calcXY.x,
+          y = _calcXY.y;
 
       return _this.props.onDragStart && _this.props.onDragStart.call(_assertThisInitialized(_this), _this.props.i, x, y, {
         e: e,
@@ -118,9 +120,12 @@ function (_React$Component) {
       var node = _ref2.node,
           deltaX = _ref2.deltaX,
           deltaY = _ref2.deltaY;
-      if (!_this.props.onDrag) return;
-      deltaX /= _this.props.transformScale;
-      deltaY /= _this.props.transformScale;
+      var _this$props = _this.props,
+          onDrag = _this$props.onDrag,
+          transformScale = _this$props.transformScale;
+      if (!onDrag) return;
+      deltaX /= transformScale;
+      deltaY /= transformScale;
       var newPosition
       /*: PartialPosition*/
       = {
@@ -135,11 +140,11 @@ function (_React$Component) {
         dragging: newPosition
       });
 
-      var _this$calcXY2 = _this.calcXY(newPosition.top, newPosition.left),
-          x = _this$calcXY2.x,
-          y = _this$calcXY2.y;
+      var _calcXY2 = (0, _calculateUtils.calcXY)(_this.getPositionParams(), newPosition.top, newPosition.left, _this.props.w, _this.props.h),
+          x = _calcXY2.x,
+          y = _calcXY2.y;
 
-      return _this.props.onDrag && _this.props.onDrag.call(_assertThisInitialized(_this), _this.props.i, x, y, {
+      return onDrag && onDrag.call(_assertThisInitialized(_this), _this.props.i, x, y, {
         e: e,
         node: node,
         newPosition: newPosition
@@ -165,9 +170,9 @@ function (_React$Component) {
         dragging: null
       });
 
-      var _this$calcXY3 = _this.calcXY(newPosition.top, newPosition.left),
-          x = _this$calcXY3.x,
-          y = _this$calcXY3.y;
+      var _calcXY3 = (0, _calculateUtils.calcXY)(_this.getPositionParams(), newPosition.top, newPosition.left, _this.props.w, _this.props.h),
+          x = _calcXY3.x,
+          y = _calcXY3.y;
 
       return _this.props.onDragStop && _this.props.onDragStop.call(_assertThisInitialized(_this), _this.props.i, x, y, {
         e: e,
@@ -208,19 +213,20 @@ function (_React$Component) {
     value: function componentDidUpdate(prevProps
     /*: Props*/
     ) {
-      if (this.props.droppingPosition && prevProps.droppingPosition) {
-        this.moveDroppingItem(prevProps);
-      }
-    }
+      this.moveDroppingItem(prevProps);
+    } // When a droppingPosition is present, this means we should fire a move event, as if we had moved
+    // this element by `x, y` pixels.
+
   }, {
     key: "moveDroppingItem",
     value: function moveDroppingItem(prevProps
     /*: Props*/
     ) {
       var droppingPosition = this.props.droppingPosition;
+      var prevDroppingPosition = prevProps.droppingPosition;
       var dragging = this.state.dragging;
 
-      if (!droppingPosition || !prevProps.droppingPosition) {
+      if (!droppingPosition || !prevDroppingPosition) {
         return;
       }
 
@@ -233,167 +239,36 @@ function (_React$Component) {
         );
       }
 
-      var shouldDrag = dragging && droppingPosition.x !== prevProps.droppingPosition.x || droppingPosition.y !== prevProps.droppingPosition.y;
+      var shouldDrag = dragging && droppingPosition.left !== prevDroppingPosition.left || droppingPosition.top !== prevDroppingPosition.top;
 
       if (!dragging) {
         this.onDragStart(droppingPosition.e, {
           node: this.currentNode,
-          deltaX: droppingPosition.x,
-          deltaY: droppingPosition.y
+          deltaX: droppingPosition.left,
+          deltaY: droppingPosition.top
         });
       } else if (shouldDrag) {
-        var deltaX = droppingPosition.x - dragging.left;
-        var deltaY = droppingPosition.y - dragging.top;
+        var deltaX = droppingPosition.left - dragging.left;
+        var deltaY = droppingPosition.top - dragging.top;
         this.onDrag(droppingPosition.e, {
           node: this.currentNode,
           deltaX: deltaX,
           deltaY: deltaY
         });
       }
-    } // Helper for generating column width
-
-  }, {
-    key: "calcColWidth",
-    value: function calcColWidth()
-    /*: number*/
-    {
-      var _this$props = this.props,
-          margin = _this$props.margin,
-          containerPadding = _this$props.containerPadding,
-          containerWidth = _this$props.containerWidth,
-          cols = _this$props.cols;
-      return (containerWidth - margin[0] * (cols - 1) - containerPadding[0] * 2) / cols;
     }
-    /**
-     * Return position on the page given an x, y, w, h.
-     * left, top, width, height are all in pixels.
-     * @param  {Number}  x             X coordinate in grid units.
-     * @param  {Number}  y             Y coordinate in grid units.
-     * @param  {Number}  w             W coordinate in grid units.
-     * @param  {Number}  h             H coordinate in grid units.
-     * @return {Object}                Object containing coords.
-     */
-
   }, {
-    key: "calcPosition",
-    value: function calcPosition(x
-    /*: number*/
-    , y
-    /*: number*/
-    , w
-    /*: number*/
-    , h
-    /*: number*/
-    , state
-    /*: ?Object*/
-    )
-    /*: Position*/
+    key: "getPositionParams",
+    value: function getPositionParams()
+    /*: PositionParams*/
     {
-      var _this$props2 = this.props,
-          margin = _this$props2.margin,
-          containerPadding = _this$props2.containerPadding,
-          rowHeight = _this$props2.rowHeight;
-      var colWidth = this.calcColWidth();
-      var out = {}; // If resizing, use the exact width and height as returned from resizing callbacks.
-
-      if (state && state.resizing) {
-        out.width = Math.round(state.resizing.width);
-        out.height = Math.round(state.resizing.height);
-      } // Otherwise, calculate from grid units.
-      else {
-          // 0 * Infinity === NaN, which causes problems with resize constraints;
-          // Fix this if it occurs.
-          // Note we do it here rather than later because Math.round(Infinity) causes deopt
-          out.width = w === Infinity ? w : Math.round(colWidth * w + Math.max(0, w - 1) * margin[0]);
-          out.height = h === Infinity ? h : Math.round(rowHeight * h + Math.max(0, h - 1) * margin[1]);
-        } // If dragging, use the exact width and height as returned from dragging callbacks.
-
-
-      if (state && state.dragging) {
-        out.top = Math.round(state.dragging.top);
-        out.left = Math.round(state.dragging.left);
-      } // Otherwise, calculate from grid units.
-      else {
-          out.top = Math.round((rowHeight + margin[1]) * y + containerPadding[1]);
-          out.left = Math.round((colWidth + margin[0]) * x + containerPadding[0]);
-        }
-
-      return out;
-    }
-    /**
-     * Translate x and y coordinates from pixels to grid units.
-     * @param  {Number} top  Top position (relative to parent) in pixels.
-     * @param  {Number} left Left position (relative to parent) in pixels.
-     * @return {Object} x and y in grid units.
-     */
-
-  }, {
-    key: "calcXY",
-    value: function calcXY(top
-    /*: number*/
-    , left
-    /*: number*/
-    )
-    /*: { x: number, y: number }*/
-    {
-      var _this$props3 = this.props,
-          margin = _this$props3.margin,
-          cols = _this$props3.cols,
-          rowHeight = _this$props3.rowHeight,
-          w = _this$props3.w,
-          h = _this$props3.h,
-          maxRows = _this$props3.maxRows;
-      var colWidth = this.calcColWidth(); // left = colWidth * x + margin * (x + 1)
-      // l = cx + m(x+1)
-      // l = cx + mx + m
-      // l - m = cx + mx
-      // l - m = x(c + m)
-      // (l - m) / (c + m) = x
-      // x = (left - margin) / (coldWidth + margin)
-
-      var x = Math.round((left - margin[0]) / (colWidth + margin[0]));
-      var y = Math.round((top - margin[1]) / (rowHeight + margin[1])); // Capping
-
-      x = Math.max(Math.min(x, cols - w), 0);
-      y = Math.max(Math.min(y, maxRows - h), 0);
       return {
-        x: x,
-        y: y
-      };
-    }
-    /**
-     * Given a height and width in pixel values, calculate grid units.
-     * @param  {Number} height Height in pixels.
-     * @param  {Number} width  Width in pixels.
-     * @return {Object} w, h as grid units.
-     */
-
-  }, {
-    key: "calcWH",
-    value: function calcWH(_ref4)
-    /*: { w: number, h: number }*/
-    {
-      var height = _ref4.height,
-          width = _ref4.width;
-      var _this$props4 = this.props,
-          margin = _this$props4.margin,
-          maxRows = _this$props4.maxRows,
-          cols = _this$props4.cols,
-          rowHeight = _this$props4.rowHeight,
-          x = _this$props4.x,
-          y = _this$props4.y;
-      var colWidth = this.calcColWidth(); // width = colWidth * w - (margin * (w - 1))
-      // ...
-      // w = (width + margin) / (colWidth + margin)
-
-      var w = Math.round((width + margin[0]) / (colWidth + margin[0]));
-      var h = Math.round((height + margin[1]) / (rowHeight + margin[1])); // Capping
-
-      w = Math.max(Math.min(w, cols - x), 0);
-      h = Math.max(Math.min(h, maxRows - y), 0);
-      return {
-        w: w,
-        h: h
+        cols: this.props.cols,
+        containerPadding: this.props.containerPadding,
+        containerWidth: this.props.containerWidth,
+        margin: this.props.margin,
+        maxRows: this.props.maxRows,
+        rowHeight: this.props.rowHeight
       };
     }
     /**
@@ -414,10 +289,10 @@ function (_React$Component) {
     )
     /*: { [key: string]: ?string }*/
     {
-      var _this$props5 = this.props,
-          usePercentages = _this$props5.usePercentages,
-          containerWidth = _this$props5.containerWidth,
-          useCSSTransforms = _this$props5.useCSSTransforms;
+      var _this$props2 = this.props,
+          usePercentages = _this$props2.usePercentages,
+          containerWidth = _this$props2.containerWidth,
+          useCSSTransforms = _this$props2.useCSSTransforms;
       var style; // CSS Transforms support (default)
 
       if (useCSSTransforms) {
@@ -444,10 +319,13 @@ function (_React$Component) {
     key: "mixinDraggable",
     value: function mixinDraggable(child
     /*: ReactElement<any>*/
+    , isDraggable
+    /*: boolean*/
     )
     /*: ReactElement<any>*/
     {
       return _react.default.createElement(_reactDraggable.DraggableCore, {
+        disabled: !isDraggable,
         onStart: this.onDragStart,
         onDrag: this.onDrag,
         onStop: this.onDragStop,
@@ -469,25 +347,32 @@ function (_React$Component) {
     /*: ReactElement<any>*/
     , position
     /*: Position*/
+    , isResizable
+    /*: boolean*/
     )
     /*: ReactElement<any>*/
     {
-      var _this$props6 = this.props,
-          cols = _this$props6.cols,
-          x = _this$props6.x,
-          minW = _this$props6.minW,
-          minH = _this$props6.minH,
-          maxW = _this$props6.maxW,
-          maxH = _this$props6.maxH,
-          transformScale = _this$props6.transformScale; // This is the max possible width - doesn't go to infinity because of the width of the window
+      var _this$props3 = this.props,
+          cols = _this$props3.cols,
+          x = _this$props3.x,
+          minW = _this$props3.minW,
+          minH = _this$props3.minH,
+          maxW = _this$props3.maxW,
+          maxH = _this$props3.maxH,
+          transformScale = _this$props3.transformScale;
+      var positionParams = this.getPositionParams(); // This is the max possible width - doesn't go to infinity because of the width of the window
 
-      var maxWidth = this.calcPosition(0, 0, cols - x, 0).width; // Calculate min/max constraints using our min & maxes
+      var maxWidth = (0, _calculateUtils.calcPosition)(positionParams, 0, 0, cols - x, 0).width; // Calculate min/max constraints using our min & maxes
 
-      var mins = this.calcPosition(0, 0, minW, minH);
-      var maxes = this.calcPosition(0, 0, maxW, maxH);
+      var mins = (0, _calculateUtils.calcPosition)(positionParams, 0, 0, minW, minH);
+      var maxes = (0, _calculateUtils.calcPosition)(positionParams, 0, 0, maxW, maxH);
       var minConstraints = [mins.width, mins.height];
       var maxConstraints = [Math.min(maxes.width, maxWidth), Math.min(maxes.height, Infinity)];
       return _react.default.createElement(_reactResizable.Resizable, {
+        draggableOpts: {
+          disabled: !isResizable
+        },
+        className: isResizable ? undefined : "react-resizable-hide",
         width: position.width,
         height: position.height,
         minConstraints: minConstraints,
@@ -517,25 +402,26 @@ function (_React$Component) {
      */
     value: function onResizeHandler(e
     /*: Event*/
-    , _ref5, handlerName
+    , _ref4, handlerName
     /*: string*/
     ) {
-      var node = _ref5.node,
-          size = _ref5.size;
+      var node = _ref4.node,
+          size = _ref4.size;
       var handler = this.props[handlerName];
       if (!handler) return;
-      var _this$props7 = this.props,
-          cols = _this$props7.cols,
-          x = _this$props7.x,
-          i = _this$props7.i,
-          maxW = _this$props7.maxW,
-          minW = _this$props7.minW,
-          maxH = _this$props7.maxH,
-          minH = _this$props7.minH; // Get new XY
+      var _this$props4 = this.props,
+          cols = _this$props4.cols,
+          x = _this$props4.x,
+          y = _this$props4.y,
+          i = _this$props4.i,
+          maxW = _this$props4.maxW,
+          minW = _this$props4.minW,
+          maxH = _this$props4.maxH,
+          minH = _this$props4.minH; // Get new XY
 
-      var _this$calcWH = this.calcWH(size),
-          w = _this$calcWH.w,
-          h = _this$calcWH.h; // Cap w at numCols
+      var _calcWH = (0, _calculateUtils.calcWH)(this.getPositionParams(), size.width, size.height, x, y),
+          w = _calcWH.w,
+          h = _calcWH.h; // Cap w at numCols
 
 
       w = Math.min(w, cols - x); // Ensure w is at least 1
@@ -558,16 +444,16 @@ function (_React$Component) {
     value: function render()
     /*: ReactNode*/
     {
-      var _this$props8 = this.props,
-          x = _this$props8.x,
-          y = _this$props8.y,
-          w = _this$props8.w,
-          h = _this$props8.h,
-          isDraggable = _this$props8.isDraggable,
-          isResizable = _this$props8.isResizable,
-          droppingPosition = _this$props8.droppingPosition,
-          useCSSTransforms = _this$props8.useCSSTransforms;
-      var pos = this.calcPosition(x, y, w, h, this.state);
+      var _this$props5 = this.props,
+          x = _this$props5.x,
+          y = _this$props5.y,
+          w = _this$props5.w,
+          h = _this$props5.h,
+          isDraggable = _this$props5.isDraggable,
+          isResizable = _this$props5.isResizable,
+          droppingPosition = _this$props5.droppingPosition,
+          useCSSTransforms = _this$props5.useCSSTransforms;
+      var pos = (0, _calculateUtils.calcPosition)(this.getPositionParams(), x, y, w, h, this.state);
 
       var child = _react.default.Children.only(this.props.children); // Create the child element. We clone the existing element but modify its className and style.
 
@@ -586,9 +472,9 @@ function (_React$Component) {
       }); // Resizable support. This is usually on but the user can toggle it off.
 
 
-      if (isResizable) newChild = this.mixinResizable(newChild, pos); // Draggable support. This is always on, except for with placeholders.
+      newChild = this.mixinResizable(newChild, pos, isResizable); // Draggable support. This is always on, except for with placeholders.
 
-      if (isDraggable) newChild = this.mixinDraggable(newChild);
+      newChild = this.mixinDraggable(newChild, isDraggable);
       return newChild;
     }
   }]);
@@ -675,8 +561,8 @@ _defineProperty(GridItem, "propTypes", {
   // Current position of a dropping element
   droppingPosition: _propTypes.default.shape({
     e: _propTypes.default.object.isRequired,
-    x: _propTypes.default.number.isRequired,
-    y: _propTypes.default.number.isRequired
+    left: _propTypes.default.number.isRequired,
+    top: _propTypes.default.number.isRequired
   })
 });
 
